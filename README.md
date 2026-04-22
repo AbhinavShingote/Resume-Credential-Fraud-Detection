@@ -1,5 +1,5 @@
 # VisiVerify — Resume & Credential Fraud Detection Platform
-
+![CI](https://github.com/AbhinavShingote/Resume-Credential-Fraud-Detection/actions/workflows/ci.yml/badge.svg)
 AI-powered platform that detects fake resumes, manipulated certificates, and suspicious employment histories.
 
 Academic mini-project · MIT Academy of Engineering · 2026
