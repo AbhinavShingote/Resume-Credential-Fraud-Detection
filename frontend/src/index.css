@@ -1,0 +1,41 @@
+/* ==========================================================
+   Global CSS — entry point for all styles in the app.
+   ========================================================== */
+
+/* Tailwind's three layers.
+   Order matters: base → components → utilities.
+   PostCSS will replace these directives with the actual CSS
+   Tailwind generates based on the class names you use. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* --- Base resets --- */
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #faf7f0;          /* cream — matches Tailwind theme */
+  color: #1a1918;                /* ink */
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Thinner, calmer scrollbars (Chrome/Safari/Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #e7e0cc;           /* border color */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c2bda8;
+}
