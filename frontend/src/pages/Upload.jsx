@@ -3,10 +3,14 @@
  *
  * Flow:
  *   1. User drops / picks a PDF or DOCX
- *   2. We validate type + size client-side (friendly errors, same as backend)
+ *   2. Validate type + size client-side (friendly errors matching backend)
  *   3. POST to /resumes/upload (multipart/form-data)
- *   4. Show an animated 4-stage progress indicator while backend analyzes
- *   5. On success, navigate to /reports/{resume_id} so the user sees the result
+ *   4. Animated 4-stage progress while backend analyzes
+ *   5. On success, navigate to /reports/{resume_id}
+ *
+ * Heading and copy adapt based on user role:
+ *   - candidate → "Analyze your resume" + self-check messaging
+ *   - recruiter/admin → "New analysis" + professional case-file tone
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 
 const C = {
   ink: '#1a1918',
@@ -31,11 +36,9 @@ const C = {
 const F_DISP = "'Fraunces', Georgia, serif";
 const F_MONO = "'IBM Plex Mono', monospace";
 
-// Upload constraints — must match backend (MAX_UPLOAD_MB=5, allowed exts .pdf/.docx)
 const MAX_MB = 5;
 const ALLOWED = ['.pdf', '.docx'];
 
-// Visible pipeline stages (cosmetic — real analysis runs on the backend)
 const STAGES = [
   { key: 'uploading', label: 'Uploading file to secure storage' },
   { key: 'parsing',   label: 'Parsing resume · extracting entities via spaCy NER' },
@@ -46,6 +49,7 @@ const STAGES = [
 
 export default function Upload() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [filename, setFilename] = useState('');
   const [phase, setPhase] = useState('idle'); // idle | analyzing | done | error
@@ -53,8 +57,7 @@ export default function Upload() {
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
 
-
-  // ------------------- Validation -------------------
+  const isCandidate = user?.role === 'candidate';
 
   const validate = (file) => {
     if (!file) return 'No file selected';
@@ -70,9 +73,6 @@ export default function Upload() {
     return null;
   };
 
-
-  // ------------------- Core upload logic -------------------
-
   const handleFile = async (file) => {
     const err = validate(file);
     if (err) {
@@ -85,8 +85,7 @@ export default function Upload() {
     setPhase('analyzing');
     setCurrentStage(0);
 
-    // Cosmetic stage ticker — advances every ~650ms so the user sees progress
-    // regardless of how fast the backend is. Cleared when the upload completes.
+    // Cosmetic stage ticker — advances ~every 650ms for visual progress
     const ticker = setInterval(() => {
       setCurrentStage((s) => (s < STAGES.length - 1 ? s + 1 : s));
     }, 650);
@@ -94,12 +93,11 @@ export default function Upload() {
     try {
       const report = await api.upload('/resumes/upload', file);
       clearInterval(ticker);
-      setCurrentStage(STAGES.length); // all stages complete
+      setCurrentStage(STAGES.length);
       setPhase('done');
 
-      // Brief pause so the user sees the "done" state, then go to report
       setTimeout(() => {
-        navigate(`/reports/${report.id}`, { replace: true });
+        navigate(`/reports/${report.resume_id}`, { replace: true });
       }, 600);
     } catch (e) {
       clearInterval(ticker);
@@ -108,9 +106,6 @@ export default function Upload() {
     }
   };
 
-
-  // ------------------- Drag & drop handlers -------------------
-
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -118,24 +113,22 @@ export default function Upload() {
     if (file) handleFile(file);
   };
 
-
-  // ------------------- Render -------------------
-
   return (
     <div className="max-w-3xl">
+      {/* ============ Header (role-aware) ============ */}
       <div
         className="text-xs mb-2"
         style={{ fontFamily: F_MONO, color: C.muted, letterSpacing: '0.15em' }}
       >
-        INTAKE · STAGE 01
+        {isCandidate ? 'SELF CHECK' : 'INTAKE · STAGE 01'}
       </div>
       <h1 style={{ fontFamily: F_DISP, fontSize: 40, fontWeight: 500, color: C.ink }}>
-        New analysis
+        {isCandidate ? 'Analyze your resume' : 'New analysis'}
       </h1>
       <p className="text-sm mt-2 mb-8" style={{ color: C.muted }}>
-        Upload a resume in PDF or DOCX format. The full fraud pipeline —
-        parsing, metadata checks, company verification, and risk scoring —
-        runs automatically.
+        {isCandidate
+          ? 'Upload your resume to see how a recruiter\'s fraud detection system would score it. You\'ll get a detailed report showing any issues you should fix before applying to jobs.'
+          : 'Upload a resume in PDF or DOCX format. The full fraud pipeline — parsing, metadata checks, company verification, and risk scoring — runs automatically.'}
       </p>
 
       {/* ============ IDLE: drop zone ============ */}
@@ -166,7 +159,9 @@ export default function Upload() {
                 style={{ color: C.muted, margin: '0 auto 16px' }}
               />
               <div style={{ fontFamily: F_DISP, fontSize: 20, color: C.ink }}>
-                Drop a resume here, or click to browse
+                {isCandidate
+                  ? 'Drop your resume here, or click to browse'
+                  : 'Drop a resume here, or click to browse'}
               </div>
               <div
                 className="text-xs mt-2"
@@ -189,7 +184,7 @@ export default function Upload() {
         </>
       )}
 
-      {/* ============ ANALYZING / DONE: progress card ============ */}
+      {/* ============ ANALYZING / DONE ============ */}
       {(phase === 'analyzing' || phase === 'done') && (
         <div
           className="p-8 rounded-sm"
@@ -252,7 +247,7 @@ export default function Upload() {
         </div>
       )}
 
-      {/* ============ ERROR: retry view ============ */}
+      {/* ============ ERROR ============ */}
       {phase === 'error' && (
         <div
           className="p-8 rounded-sm text-center"

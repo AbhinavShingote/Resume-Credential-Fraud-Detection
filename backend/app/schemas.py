@@ -16,11 +16,10 @@ from pydantic import BaseModel, EmailStr, Field
 # ========== Authentication ==========
 
 class UserRegister(BaseModel):
-    """Body of POST /api/v1/auth/register"""
     email: EmailStr
     name: str = Field(min_length=2, max_length=255)
     password: str = Field(min_length=8, max_length=128)
-    role: Literal["recruiter", "admin", "verification_staff"] = "recruiter"
+    role: Literal["recruiter", "candidate", "admin", "verification_staff"] = "recruiter"
 
 
 class UserLogin(BaseModel):

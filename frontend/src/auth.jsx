@@ -55,12 +55,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const register = useCallback(async (email, name, password) => {
+  const register = useCallback(async (email, name, password, role = 'recruiter') => {
     setLoading(true);
     try {
-      // Create the account
-      await api.post('/auth/register', { email, name, password, role: 'recruiter' });
-      // Immediately log them in so they don't have to type credentials again
+      // Create the account with the chosen role
+      await api.post('/auth/register', { email, name, password, role });
+      // Immediately log them in
       const res = await api.post('/auth/login', { email, password });
       tokenStore.set(res.access_token);
       userStore.set(res.user);

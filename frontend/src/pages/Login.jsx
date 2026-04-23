@@ -4,6 +4,8 @@
  * The page has a single state variable `mode` that toggles between
  * "login" and "register" — same UI shell, different fields and submit logic.
  *
+ * In register mode, users also choose their role: Recruiter or Candidate.
+ *
  * On success, useAuth().login() / register() saves the JWT to localStorage
  * and the redirect in App.jsx sends them to the dashboard.
  */
@@ -20,10 +22,11 @@ export default function Login() {
   // Toggle between sign-in and sign-up
   const [mode, setMode] = useState('login'); // 'login' | 'register'
 
-  // Form fields
-  const [email, setEmail] = useState('recruiter@demo.com');
-  const [password, setPassword] = useState('demo1234');
+  // Form fields — start empty for a professional look
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState('recruiter'); // only used in register mode
 
   const [error, setError] = useState('');
 
@@ -31,19 +34,11 @@ export default function Login() {
 
   const switchMode = () => {
     setError('');
-    if (isRegister) {
-      // Switching to login — restore demo defaults for convenience
-      setEmail('recruiter@demo.com');
-      setPassword('demo1234');
-      setName('');
-      setMode('login');
-    } else {
-      // Switching to register — clear fields so user types fresh
-      setEmail('');
-      setPassword('');
-      setName('');
-      setMode('register');
-    }
+    setEmail('');
+    setPassword('');
+    setName('');
+    setRole('recruiter');
+    setMode(isRegister ? 'login' : 'register');
   };
 
   const handleSubmit = async (e) => {
@@ -51,7 +46,7 @@ export default function Login() {
     setError('');
     try {
       if (isRegister) {
-        await register(email, name, password);
+        await register(email, name, password, role);
       } else {
         await login(email, password);
       }
@@ -144,8 +139,8 @@ export default function Login() {
           </h2>
           <p className="text-sm mt-1" style={{ color: '#6b6862' }}>
             {isRegister
-              ? 'Set up a recruiter account in seconds.'
-              : 'Use the seeded demo accounts below.'}
+              ? 'Create your account in seconds.'
+              : 'Sign in to continue to your dashboard.'}
           </p>
 
           {/* --- Fields --- */}
@@ -179,6 +174,52 @@ export default function Login() {
                     fontFamily: "'IBM Plex Mono', monospace",
                   }}
                 />
+              </div>
+            )}
+
+            {/* Role picker — only shown in register mode */}
+            {isRegister && (
+              <div>
+                <label
+                  className="text-xs"
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    color: '#6b6862',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  I AM A
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {[
+                    { value: 'recruiter', label: 'Recruiter', sub: 'I hire people' },
+                    { value: 'candidate', label: 'Candidate', sub: 'I want to check my resume' },
+                  ].map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setRole(r.value)}
+                      className="p-3 text-left rounded-sm transition-all"
+                      style={{
+                        background: role === r.value ? '#1a1918' : '#faf7f0',
+                        color: role === r.value ? '#faf7f0' : '#1a1918',
+                        border: `1px solid ${role === r.value ? '#1a1918' : '#e7e0cc'}`,
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{r.label}</div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          opacity: 0.7,
+                          fontFamily: "'IBM Plex Mono', monospace",
+                          marginTop: 2,
+                        }}
+                      >
+                        {r.sub}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -302,21 +343,6 @@ export default function Login() {
               </>
             )}
           </div>
-
-          {/* --- Demo creds — only shown in login mode --- */}
-          {!isRegister && (
-            <div
-              className="mt-4 pt-4 border-t border-dashed text-xs space-y-1"
-              style={{
-                borderColor: '#e7e0cc',
-                color: '#6b6862',
-                fontFamily: "'IBM Plex Mono', monospace",
-              }}
-            >
-              <div>recruiter@demo.com · demo1234</div>
-              <div>admin@demo.com · admin1234</div>
-            </div>
-          )}
         </form>
       </div>
     </div>

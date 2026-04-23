@@ -2,8 +2,12 @@
  * Sidebar navigation rail.
  *
  * Rendered on every protected page by <Shell> in App.jsx.
- * Shows: logo, nav items (Dashboard/Upload/Reports/Admin), user card.
- * Active link is highlighted.
+ * Shows: logo, nav items, user card.
+ *
+ * Menu labels adapt based on role:
+ *   - candidate → "My dashboard", "Analyze my resume", "My reports"
+ *   - recruiter/admin → "Dashboard", "New analysis", "All reports"
+ *   - admin also sees → "Administration"
  */
 import {
   FileSearch, FileUp, LayoutDashboard, LogOut, Shield, Users,
@@ -16,11 +20,25 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Build nav items dynamically — only admins see the Admin link.
+  const isCandidate = user?.role === 'candidate';
+
+  // Build nav items dynamically based on role
   const items = [
-    { to: '/',        icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/upload',  icon: FileUp,          label: 'New analysis' },
-    { to: '/reports', icon: FileSearch,      label: 'All reports' },
+    {
+      to: '/',
+      icon: LayoutDashboard,
+      label: isCandidate ? 'My dashboard' : 'Dashboard',
+    },
+    {
+      to: '/upload',
+      icon: FileUp,
+      label: isCandidate ? 'Analyze my resume' : 'New analysis',
+    },
+    {
+      to: '/reports',
+      icon: FileSearch,
+      label: isCandidate ? 'My reports' : 'All reports',
+    },
     ...(user?.role === 'admin'
       ? [{ to: '/admin', icon: Users, label: 'Administration' }]
       : []),

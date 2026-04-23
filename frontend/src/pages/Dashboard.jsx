@@ -5,18 +5,19 @@
  *   GET /reports/stats  → top stat cards (total, high, medium, low, avg)
  *   GET /reports/       → recent submissions table
  *
- * On mount, shows a loading skeleton; on success, renders the full UI.
+ * Heading and copy adapt based on user role:
+ *   - candidate → friendly "Hello, [name]" + self-check messaging
+ *   - recruiter/admin → professional "Overview" + case file tone
  */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ChevronRight, Plus,
-} from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import {
   Cell, Pie, PieChart, ResponsiveContainer, Tooltip,
 } from 'recharts';
 
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 
 const C = {
   ink: '#1a1918',
@@ -36,7 +37,6 @@ const C = {
 const F_DISP = "'Fraunces', Georgia, serif";
 const F_MONO = "'IBM Plex Mono', monospace";
 
-// Shared styling helpers
 const riskColor = (level) => ({
   low: { fg: C.forest, bg: C.forestBg, label: 'LOW' },
   medium: { fg: C.amber, bg: C.amberBg, label: 'MED' },
@@ -63,13 +63,15 @@ const formatWhen = (iso) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const isCandidate = user?.role === 'candidate';
+
   useEffect(() => {
-    // Run both requests in parallel — faster than awaiting them in sequence.
     Promise.all([api.get('/reports/stats'), api.get('/reports/')])
       .then(([s, r]) => {
         setStats(s);
@@ -98,7 +100,6 @@ export default function Dashboard() {
     );
   }
 
-  // Prepare pie chart data
   const pieData = [
     { name: 'Low', value: stats.low, color: C.forest },
     { name: 'Medium', value: stats.medium, color: C.amber },
@@ -107,14 +108,14 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* ============ Header ============ */}
+      {/* ============ Header (role-aware) ============ */}
       <div className="flex items-end justify-between mb-8">
         <div>
           <div
             className="text-xs"
             style={{ fontFamily: F_MONO, color: C.muted, letterSpacing: '0.15em' }}
           >
-            CASE FILE ·{' '}
+            {isCandidate ? 'WELCOME BACK' : 'CASE FILE'} ·{' '}
             {new Date()
               .toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
               .toUpperCase()}
@@ -128,15 +129,24 @@ export default function Dashboard() {
               color: C.ink,
             }}
           >
-            Overview
+            {isCandidate
+              ? `Hello, ${user.name.split(' ')[0]}`
+              : 'Overview'}
           </h1>
+          {isCandidate && (
+            <p className="text-sm mt-2 max-w-lg" style={{ color: C.muted }}>
+              Upload your resume to see how a recruiter's fraud detection system
+              would score it — and fix issues before you apply.
+            </p>
+          )}
         </div>
         <button
           onClick={() => navigate('/upload')}
           className="px-4 py-2.5 text-sm rounded-sm inline-flex items-center gap-2 active:scale-[0.98]"
           style={{ background: C.ink, color: C.cream }}
         >
-          <Plus size={16} strokeWidth={1.75} /> New analysis
+          <Plus size={16} strokeWidth={1.75} />{' '}
+          {isCandidate ? 'Analyze my resume' : 'New analysis'}
         </button>
       </div>
 
@@ -146,9 +156,9 @@ export default function Dashboard() {
         style={{ border: `1px solid ${C.border}`, background: C.soft }}
       >
         {[
-          { label: 'Resumes analyzed', value: stats.total, sub: 'All time', accent: C.ink },
-          { label: 'High risk',    value: stats.high,    sub: `${pct(stats.high, stats.total)}% of total`,   accent: C.crimson },
-          { label: 'Medium risk',  value: stats.medium,  sub: `${pct(stats.medium, stats.total)}% of total`, accent: C.amber },
+          { label: isCandidate ? 'Resumes analyzed' : 'Resumes analyzed', value: stats.total, sub: 'All time', accent: C.ink },
+          { label: 'High risk', value: stats.high, sub: `${pct(stats.high, stats.total)}% of total`, accent: C.crimson },
+          { label: 'Medium risk', value: stats.medium, sub: `${pct(stats.medium, stats.total)}% of total`, accent: C.amber },
           { label: 'Average score', value: stats.avg_score, sub: 'out of 100', accent: C.ink },
         ].map((s, i) => (
           <div
@@ -180,7 +190,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ============ Risk distribution pie ============ */}
+      {/* ============ Pie ============ */}
       {stats.total > 0 && (
         <div
           className="p-5 mb-8 rounded-sm"
@@ -228,7 +238,7 @@ export default function Dashboard() {
           § 01
         </span>
         <h2 style={{ fontFamily: F_DISP, fontSize: 22, color: C.ink, fontWeight: 500 }}>
-          Recent submissions
+          {isCandidate ? 'My recent uploads' : 'Recent submissions'}
         </h2>
         <div className="flex-1 border-t border-dashed mt-3" style={{ borderColor: C.border }} />
       </div>
@@ -238,12 +248,14 @@ export default function Dashboard() {
           className="p-8 text-center text-sm rounded-sm"
           style={{ background: C.soft, border: `1px solid ${C.border}`, color: C.muted }}
         >
-          No resumes analyzed yet.{' '}
+          {isCandidate
+            ? 'You haven\'t analyzed any resumes yet. '
+            : 'No resumes analyzed yet. '}
           <button
             onClick={() => navigate('/upload')}
             style={{ color: C.ink, textDecoration: 'underline' }}
           >
-            Upload your first one →
+            {isCandidate ? 'Check your resume →' : 'Upload your first one →'}
           </button>
         </div>
       ) : (
@@ -347,7 +359,6 @@ export default function Dashboard() {
   );
 }
 
-// Tiny helper so `pct(0, 0)` doesn't return NaN
 function pct(a, b) {
   return b === 0 ? 0 : Math.round((a / b) * 100);
 }
